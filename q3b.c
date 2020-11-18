@@ -58,7 +58,6 @@ while(read(fd,&buffer,BUFSIZE)>0)
 data[k]='\0';
 // strcpy(token,data);
 int a= sendto(sockfd,(const char *)data,strlen(data),MSG_CONFIRM,(const struct sockaddr *)&servaddr,sizeof(servaddr));
-
 strcpy(data,"");
 k=0;
 strcpy(data,"\n\n");

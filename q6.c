@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <unistd.h>
 
 pthread_mutex_t forks[5];
 pthread_cond_t cond_var[5];
@@ -10,7 +11,7 @@ int i;
 pthread_attr_t atribute;
 void *fun(int n){
 	state[n]=1;	
-	printf("Phillosopher thinking : %d\n",n);
+	// printf("Phillosopher thinking : %d\n",n);
 	sleep(2);
 	int fork1=n;
 	int fork2=(n+1)%5;
@@ -26,13 +27,13 @@ void *fun(int n){
 	pthread_cond_wait(&forks[fork2],&cond_var[fork2]);
 
 	}
-printf("%d has taken fork %d and %d \n",n,fork1,fork2);
+printf("P%d recieves F%d,F%d \n",n,fork1,fork2);
 
 state[n]=0;
-printf("%d is now eating \n",n);
+// printf("%d is now eating \n",n);
 sleep(2);
 
-printf("%d is done eating \n",n);
+printf("P%d is done eating \n",n);
 state[n]=1;
 pthread_cond_signal(&cond_var[fork1]);
 pthread_mutex_unlock(&forks[fork1]);

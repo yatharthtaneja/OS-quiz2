@@ -1,83 +1,113 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <limits.h>
 #include <semaphore.h>
+#include <pthread.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include<string.h>
 
-pthread_mutex_t forks[5];
-pthread_cond_t cond_var[5];
-int state[5];
-int i;
-pthread_attr_t atribute;
-void *fun(int n){
-	state[n]=1;	
-	printf("Phillosopher thinking : %d\n",n);
-	sleep(2);
-	int fork1=n;
-	int fork2=(n+1)%5;
-
-	pthread_mutex_lock(&forks[fork1]);
-    pthread_mutex_lock(&forks[fork2]);
-
-	while (state[n]==0 || state[fork2]==0)
-	{
-        if(state[fork1]==0)
-	        pthread_cond_wait(&forks[fork1],&cond_var[fork1]);
-        else
-	pthread_cond_wait(&forks[fork2],&cond_var[fork2]);
-
-	}
-printf("%d has taken fork %d \n",n,fork1);
+sem_t wrmutex, mutex;
+void* writer_func(void* id);
+void* reader_func(void* id);
+struct Queue* queue;
+int lock;
+int readcnt=0;
 
 
+void* reader_func(void* id)
+{   
+    int i = *(int*)id;
 
-	// while (state[fork2]==0)
-	// {
-	// }
-printf("%d has taken fork %d \n",n,fork2);
-state[n]=0;
-printf("%d is now eating \n",n);
-sleep(2);
+    sem_wait(&mutex);
+    readcnt++;
+    if(readcnt==1)
+    sem_wait(&wrmutex);
 
-printf("%d is done eating \n",n);
-state[n]=1;
-pthread_cond_signal(&cond_var[fork1]);
-pthread_mutex_unlock(&forks[fork1]);
-pthread_cond_signal(&cond_var[fork2]);
-pthread_mutex_unlock(&forks[fork2]);
+// read code
+    key_t key = ftok("file",65);
+    int shmid=shmget(key,1024,0666|IPC_CREAT);
+    char *str =(char*) shmat(shmid,(void*)0,0);
+    printf("Reader %d is reading %s\n", i, str);
+
+    shmdt(str);
+    // shmctl(shmid,IPC_RMID,NULL);
+    sem_post(&mutex);
+
+    sem_wait(&mutex);
+readcnt--;
+if(readcnt==0);
+    sem_post(&wrmutex);
+sem_post(&mutex);
+
+
 }
 
-int main(void) {
-	pthread_t philosopher[5];
-	pthread_attr_init(&atribute);
-	int k;
-	for(int i=0;i<5;i++){
-		k= pthread_mutex_init(&forks[i],NULL);
-		if(k==-1){
-			printf("unable to initialise\n");
-			exit(1);
-		}
-	}
-for(i=0;i<5;i++){
-		int k= pthread_cond_init(&cond_var[i],NULL);
-		if(k!=0){
-			// printf("unable to initialise");
-			exit(1);
-		}
-	}
-for(i=0;i<5;i++){
-		k= pthread_create(&philosopher[i],NULL,fun,i);
-		if(k!=0){
-			printf("unable to create thread\n");
-			exit(1);
-		}
-	}
-for(i=0;i<5;i++){
-		int k= pthread_join(philosopher[i],NULL);
-		if(k!=0){
-			printf("unable to join\n");
-			exit(1);
-		}
-	}
+void* writer_func(void* id)
+{   
+    int i = *(int*)id;
+    int rndm = rand()%10;
 
-	return 0;
+    sem_wait(&wrmutex);
+    printf("Writer %d is writing %d\n", i, rndm);
+
+
+    // performs write
+    key_t key = ftok("file",65);
+    int shmid=shmget(key,1024,0666|IPC_CREAT);
+    char *str =(char*) shmat(shmid,(void*)0,0);
+    // gets(str);
+    char num[50];
+    sprintf(num,"%d",rndm);
+    strcpy(str,num);
+    printf("Writer %d wrote %d\n", i, rndm);
+    shmdt(str);
+    sem_post(&wrmutex);
+
+}
+
+
+
+int main()
+{
+
+    lock = 0;
+    printf("Input number of readers/writers: \n");
+    int n;
+    scanf("%d", &n);
+
+    //number of threads
+    pthread_t read[n], write[n];
+    int id_n[n];
+
+
+    sem_init(&mutex, 0, 1);
+    sem_init(&wrmutex, 0, 1);
+
+
+    for (int i=0; i<n; i++) 
+    {
+        id_n[i] = i;
+        //reader threads    
+        pthread_create(&write[i], NULL, &writer_func, &id_n[i]);
+        pthread_create(&read[i], NULL, &reader_func, &id_n[i]);
+
+    }
+
+
+
+    for (int i=0; i<n; i++) 
+    {
+        pthread_join(write[i], NULL);
+        pthread_join(read[i], NULL);
+    }
+    
+        key_t key = ftok("file",65);
+    int shmid=shmget(key,1024,0666|IPC_CREAT);
+    shmctl(shmid,IPC_RMID,NULL);
+    sem_destroy(&mutex);
+    sem_destroy(&wrmutex);
+
+
+    return 0;
 }
