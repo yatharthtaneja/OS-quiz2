@@ -16,21 +16,18 @@ void *fun(int n){
 	int fork2=(n+1)%5;
 
 	pthread_mutex_lock(&forks[fork1]);
+    pthread_mutex_lock(&forks[fork2]);
 
-	while (state[n]==0)
+	while (state[n]==0 || state[fork2]==0)
 	{
-	pthread_cond_wait(&forks[fork1],&cond_var[fork1]);
-	}
-printf("%d has taken fork %d \n",n,fork1);
-
-pthread_mutex_lock(&forks[fork2]);
-
-
-	while (state[fork2]==0)
-	{
+        if(state[fork1]==0)
+	        pthread_cond_wait(&forks[fork1],&cond_var[fork1]);
+        else
 	pthread_cond_wait(&forks[fork2],&cond_var[fork2]);
+
 	}
-printf("%d has taken fork %d \n",n,fork2);
+printf("%d has taken fork %d and %d \n",n,fork1,fork2);
+
 state[n]=0;
 printf("%d is now eating \n",n);
 sleep(2);
