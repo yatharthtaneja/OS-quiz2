@@ -34,13 +34,12 @@ int k=0;
 char data[500];
 while(read(fd,&buffer,BUFSIZE)>0)
  {   
-     if (buffer==' ')
+     if (buffer==' ' || buffer == '\n')
      {  
         data[k]='\0';
         strcpy(message_buffer.text,data);
         msgsnd(mid, &message_buffer, sizeof(message_buffer),0);
-        printf("%s",message_buffer.text);
-    
+        // printf("%s",message_buffer.text);
         strcpy(data,"");
         k=0;
      }
@@ -50,9 +49,17 @@ while(read(fd,&buffer,BUFSIZE)>0)
     
      }
 }
-// printf("%s",data[13][3]);
+data[k]='\0';
+strcpy(message_buffer.text,data);
+msgsnd(mid, &message_buffer, sizeof(message_buffer),0);
+// printf("%s",message_buffer.text);
+strcpy(data,"");
+k=0;
+
 
 close(fd);
+strcpy(message_buffer.text,"\n\n");
+msgsnd(mid, &message_buffer, sizeof(message_buffer),0);
 
     return 0;
 }
