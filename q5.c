@@ -8,8 +8,7 @@
 #include<string.h>
 
 sem_t wrmutex, mutex;
-// void* writer_func(void* id);
-// void* reader_func(void* id);
+
 int readcnt=0;
 
 
@@ -24,7 +23,7 @@ void* reader_func(void* id)
 
 // read code
     key_t key = ftok("file",65);
-    int shmid=shmget(key,1024,0666|IPC_CREAT);
+    int shmid=shmget(key,64,0666|IPC_CREAT);
     char *str =(char*) shmat(shmid,(void*)0,0);
     printf("Reader %d is reading %s\n", i, str);
 
@@ -52,7 +51,7 @@ void* writer_func(void* id)
 
     // performs write
     key_t key = ftok("file",65);
-    int shmid=shmget(key,1024,0666|IPC_CREAT);
+    int shmid=shmget(key,64,0666|IPC_CREAT);
     char *str =(char*) shmat(shmid,(void*)0,0);
     // gets(str);
     char num[50];
@@ -75,7 +74,7 @@ int main()
 
     //number of threads
     pthread_t read[n], write[n];
-    int id_n[n];
+    int id_thread[n];
 
 
     sem_init(&mutex, 0, 1);
@@ -84,10 +83,10 @@ int main()
 
     for (int i=0; i<n; i++) 
     {
-        id_n[i] = i;
+        id_thread[i] = i;
         //reader threads    
-        pthread_create(&write[i], NULL, &writer_func, &id_n[i]);
-        pthread_create(&read[i], NULL, &reader_func, &id_n[i]);
+        pthread_create(&write[i], NULL, &writer_func, &id_thread[i]);
+        pthread_create(&read[i], NULL, &reader_func, &id_thread[i]);
 
     }
 
@@ -100,7 +99,7 @@ int main()
     }
     
     key_t key = ftok("file",65);
-    int shmid=shmget(key,1024,0666|IPC_CREAT);
+    int shmid=shmget(key,64,0666|IPC_CREAT);
     shmctl(shmid,IPC_RMID,NULL);
     sem_destroy(&mutex);
     sem_destroy(&wrmutex);
